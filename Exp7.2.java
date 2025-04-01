@@ -1,162 +1,248 @@
+StudentController.java 
+package controller; 
+ 
+import model.Student; 
 import java.sql.*; 
-import java.util.Scanner; 
+import java.util.ArrayList; 
+import java.util.List; 
  
-public class ProductCRUD { 
-     
-    private static final String URL = "jdbc:mysql://localhost:3306/ProductDB";   
-    private static final String USER = "root";                                   
-    private static final String PASSWORD = "password";                       
+public class StudentController { 
  
-    public static void main(String[] args) { 
-        Scanner scanner = new Scanner(System.in); 
-         
-        try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD)) { 
-            Class.forName("com.mysql.cj.jdbc.Driver"); 
-            System.out.println("Connected to the database!"); 
+    private static final String URL = "jdbc:mysql://localhost:3306/StudentDB"; 
+    private static final String USER = "root"; 
+    private static final String PASSWORD = "rishuraman1@V"; 
  
-            boolean exit = false; 
+    // Method to create a new student 
+    public void createStudent(Student student) throws SQLException { 
+        String query = "INSERT INTO Student (Name, Department, Marks) VALUES (?, ?, ?)"; 
  
-            while (!exit) { 
-                System.out.println("\n=== Product CRUD Operations ==="); 
-                System.out.println("1. Create Product"); 
-                System.out.println("2. Read Products"); 
-                System.out.println("3. Update Product"); 
-                System.out.println("4. Delete Product"); 
-                System.out.println("5. Exit"); 
-                System.out.print("Choose an option: "); 
+        try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD); 
+             PreparedStatement pstmt = conn.prepareStatement(query)) { 
  
-                int choice = scanner.nextInt(); 
+            pstmt.setString(1, student.getName()); 
+            pstmt.setString(2, student.getDepartment()); 
+            pstmt.setDouble(3, student.getMarks()); 
  
-                scanner.nextLine();   
-                switch (choice) { 
-                    case 1 -> createProduct(conn, scanner); 
-                    case 2 -> readProducts(conn); 
-                    case 3 -> updateProduct(conn, scanner); 
-                    case 4 -> deleteProduct(conn, scanner); 
-                    case 5 -> exit = true; 
-                    default -> System.out.println("Invalid option. Try again."); 
-                } 
-            } 
- 
-        } catch (ClassNotFoundException e) { 
-            System.out.println("MySQL Driver not found: " + e.getMessage()); 
-        } catch (SQLException e) { 
-            System.out.println("SQL Error: " + e.getMessage()); 
-        } 
- 
-        scanner.close(); 
-    } 
- 
-    private static void createProduct(Connection conn, Scanner scanner) throws SQLException { 
-        System.out.print("Enter product name: "); 
-        String name = scanner.nextLine(); 
-        System.out.print("Enter price: "); 
-        double price = scanner.nextDouble(); 
-        System.out.print("Enter quantity: "); 
-        int quantity = scanner.nextInt(); 
- 
-        String query = "INSERT INTO Product (ProductName, Price, Quantity) VALUES (?, ?, 
-?)"; 
- 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) { 
-            conn.setAutoCommit(false); 
- 
-            pstmt.setString(1, name); 
-            pstmt.setDouble(2, price); 
-            pstmt.setInt(3, quantity); 
- 
-            int rows = pstmt.executeUpdate(); 
-            conn.commit(); 
- 
-            System.out.println(rows + " product(s) inserted successfully!");  
-        } catch (SQLException e) { 
-            conn.rollback(); 
-            System.out.println("Transaction rolled back due to error: " + e.getMessage()); 
-        } finally { 
-            conn.setAutoCommit(true); 
+            pstmt.executeUpdate(); 
+            System.out.println("Student added successfully!"); 
         } 
     } 
  
-    private static void readProducts(Connection conn) throws SQLException { 
-        String query = "SELECT * FROM Product"; 
+    // Method to retrieve all students 
+
  
-        try (Statement stmt = conn.createStatement(); 
+    public List<Student> getAllStudents() throws SQLException { 
+        List<Student> students = new ArrayList<>(); 
+        String query = "SELECT * FROM Student"; 
+ 
+        try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD); 
+             Statement stmt = conn.createStatement(); 
              ResultSet rs = stmt.executeQuery(query)) { 
  
-            System.out.println("\nProduct Records:"); 
-            System.out.println("--------------------------------------------------"); 
-            System.out.printf("%-10s %-20s %-10s %-10s%n", "ProductID", "ProductName", 
-"Price", "Quantity"); 
-            System.out.println("--------------------------------------------------"); 
- 
             while (rs.next()) { 
-                int id = rs.getInt("ProductID"); 
-                String name = rs.getString("ProductName"); 
-                double price = rs.getDouble("Price"); 
-                int quantity = rs.getInt("Quantity"); 
+                students.add(new Student( 
+                        rs.getInt("StudentID"), 
+                        rs.getString("Name"), 
+                        rs.getString("Department"), 
+                        rs.getDouble("Marks") 
+                )); 
+            } 
+        } 
+        return students; 
+    } 
  
-                System.out.printf("%-10d %-20s %-10.2f %-10d%n", id, name, price, quantity); 
+    // Method to update student data 
+    public void updateStudent(Student student) throws SQLException { 
+        String query = "UPDATE Student SET Name = ?, Department = ?, Marks = ? WHERE 
+StudentID = ?"; 
+ 
+        try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD); 
+             PreparedStatement pstmt = conn.prepareStatement(query)) { 
+ 
+            pstmt.setString(1, student.getName()); 
+            pstmt.setString(2, student.getDepartment()); 
+            pstmt.setDouble(3, student.getMarks()); 
+            pstmt.setInt(4, student.getStudentID()); 
+ 
+            int rows = pstmt.executeUpdate(); 
+            if (rows > 0) { 
+                System.out.println("Student updated successfully!"); 
+            } else { 
+                System.out.println("Student not found."); 
             } 
         } 
     } 
  
-   
-    private static void updateProduct(Connection conn, Scanner scanner) throws SQLException 
-{ 
-        System.out.print("Enter product ID to update: "); 
-        int id = scanner.nextInt(); 
-        scanner.nextLine();   
  
-        System.out.print("Enter new name: "); 
-        String name = scanner.nextLine(); 
-        System.out.print("Enter new price: "); 
-        double price = scanner.nextDouble(); 
-        System.out.print("Enter new quantity: "); 
-        int quantity = scanner.nextInt(); 
+    // Method to delete a student 
+    public void deleteStudent(int studentID) throws SQLException { 
+        String query = "DELETE FROM Student WHERE StudentID = ?"; 
  
-        String query = "UPDATE Product SET ProductName = ?, Price = ?, Quantity = ? WHERE 
-ProductID = ?"; 
+        try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD); 
+             PreparedStatement pstmt = conn.prepareStatement(query)) { 
  
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) { 
-            conn.setAutoCommit(false); 
- 
-            pstmt.setString(1, name); 
-            pstmt.setDouble(2, price); 
-            pstmt.setInt(3, quantity); 
-            pstmt.setInt(4, id); 
- 
+            pstmt.setInt(1, studentID); 
             int rows = pstmt.executeUpdate(); 
-            conn.commit(); 
- 
-            System.out.println(rows + " product(s) updated successfully!"); 
- 
-        } catch (SQLException e) { 
-            conn.rollback(); 
-            System.out.println("Transaction rolled back due to error: " + e.getMessage()); 
-        } finally { 
-            conn.setAutoCommit(true); 
-        } 
-    } 
- 
-    private static void deleteProduct(Connection conn, Scanner scanner) throws SQLException { 
-        System.out.print("Enter product ID to delete: "); 
-        int id = scanner.nextInt(); 
- 
-        String query = "DELETE FROM Product WHERE ProductID = ?"; 
- 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) { 
-            conn.setAutoCommit(false); 
- 
-            pstmt.setInt(1, id); 
-            int rows = pstmt.executeUpdate(); 
-            conn.commit(); 
- 
-            System.out.println(rows + " product(s) deleted successfully!"); 
-        } catch (SQLException e) { 
-            conn.rollback(); 
-            System.out.println("Transaction rolled back due to error: " + e.getMessage()); 
-        } finally { 
-            conn.setAutoCommit(true); 
+            if (rows > 0) { 
+                System.out.println("Student deleted successfully!"); 
+            } else { 
+                System.out.println("Student not found."); 
+            } 
         } 
     } 
 } 
+ 
+Student.java 
+ 
+package model; 
+ 
+public class Student { 
+    private int studentID; 
+    private String name; 
+    private String department; 
+    private double marks; 
+ 
+    public Student(int studentID, String name, String department, double marks) { 
+        this.studentID = studentID; 
+        this.name = name; 
+        this.department = department; 
+        this.marks = marks; 
+    } 
+ 
+    // Getters and Setters 
+    public int getStudentID() { 
+        return studentID; 
+    } 
+ 
+    public void setStudentID(int studentID) { 
+        this.studentID = studentID; 
+
+ 
+    } 
+ 
+    public String getName() { 
+        return name; 
+    } 
+ 
+    public void setName(String name) { 
+        this.name = name; 
+    } 
+ 
+    public String getDepartment() { 
+        return department; 
+    } 
+ 
+    public void setDepartment(String department) { 
+        this.department = department; 
+    } 
+ 
+    public double getMarks() { 
+        return marks; 
+    } 
+ 
+    public void setMarks(double marks) { 
+        this.marks = marks; 
+    } 
+ 
+    @Override 
+    public String toString() { 
+        return String.format("ID: %d, Name: %s, Dept: %s, Marks: %.2f",  
+                studentID, name, department, marks); 
+    } 
+} 
+ 
+ 
+StudentView.java 
+ 
+package view; 
+ 
+import controller.StudentController; 
+import model.Student; 
+ 
+import java.util.List; 
+
+import java.util.Scanner; 
+ 
+public class StudentView { 
+ 
+    private static final Scanner scanner = new Scanner(System.in); 
+    private static final StudentController controller = new StudentController(); 
+ 
+    public void displayMenu() { 
+        boolean exit = false; 
+ 
+        while (!exit) { 
+            System.out.println("\n=== Student Management System ==="); 
+            System.out.println("1. Add Student"); 
+            System.out.println("2. View All Students"); 
+            System.out.println("3. Update Student"); 
+            System.out.println("4. Delete Student"); 
+            System.out.println("5. Exit"); 
+            System.out.print("Choose an option: "); 
+ 
+            int choice = scanner.nextInt(); 
+            scanner.nextLine();  // Consume newline 
+ 
+            try { 
+                switch (choice) { 
+                    case 1 -> addStudent(); 
+                    case 2 -> viewStudents(); 
+                    case 3 -> updateStudent(); 
+                    case 4 -> deleteStudent(); 
+                    case 5 -> exit = true; 
+                    default -> System.out.println("Invalid option. Try again."); 
+                } 
+            } catch (Exception e) { 
+                System.out.println("Error: " + e.getMessage()); 
+            } 
+        } 
+        scanner.close(); 
+    } 
+    private void addStudent() throws Exception { 
+        System.out.print("Enter name: "); 
+        String name = scanner.nextLine(); 
+        System.out.print("Enter department: "); 
+        String department = scanner.nextLine(); 
+
+        System.out.print("Enter marks: "); 
+        double marks = scanner.nextDouble(); 
+ 
+        Student student = new Student(0, name, department, marks); 
+        controller.createStudent(student); 
+    } 
+    private void viewStudents() throws Exception { 
+        List<Student> students = controller.getAllStudents(); 
+        System.out.println("\nStudents List:"); 
+        for (Student student : students) { 
+            System.out.println(student); 
+        } 
+    } 
+    private void updateStudent() throws Exception { 
+        System.out.print("Enter student ID to update: "); 
+        int id = scanner.nextInt(); 
+        scanner.nextLine(); 
+ 
+        System.out.print("Enter new name: "); 
+        String name = scanner.nextLine(); 
+        System.out.print("Enter new department: "); 
+        String department = scanner.nextLine(); 
+        System.out.print("Enter new marks: "); 
+        double marks = scanner.nextDouble(); 
+ 
+        Student student = new Student(id, name, department, marks); 
+        controller.updateStudent(student); 
+    } 
+ 
+    private void deleteStudent() throws Exception { 
+        System.out.print("Enter student ID to delete: "); 
+        int id = scanner.nextInt(); 
+        controller.deleteStudent(id); 
+    } 
+} 
+MainApp.java 
+import view.StudentView; 
+ 
+public class MainApp { 
+    public static void main(String[] args) { 
+        StudentView view = new StudentView(); 
+        view.displayMenu();}} 
